@@ -15,7 +15,9 @@ type PageData struct {
 	Result string
 	Error  string
 	Cidade string
-	Temp   string
+	TempC  string
+	TempF  string
+	TempK  string
 }
 
 type viaCep struct {
@@ -132,7 +134,9 @@ func inputHandler(w http.ResponseWriter, r *http.Request) {
 			data.Error = fmt.Sprintf("Cidade inválida: %v", err)
 		}
 
-		data.Temp = fmt.Sprintf("%.1f", temp.Current.TempC)
+		data.TempC = fmt.Sprintf("%.1f", temp.Current.TempC)
+		data.TempF = fmt.Sprintf("%.1f", temp.Current.TempF)
+		data.TempK = fmt.Sprintf("%.1f", CtoK(temp.Current.TempC))
 
 	}
 
@@ -153,7 +157,9 @@ func showTemplate(w http.ResponseWriter, data PageData) {
 
 			{{if .Result}}<p>CEP pesquisado: {{.Result}}</p>{{end}}
 			{{if .Cidade}}<p>Cidade: {{.Cidade}}</p>{{end}}
-			{{if .Temp}}<p>Temperatura em C°: {{.Temp}}</p>{{end}}
+			{{if .TempC}}<p>Temperatura em C°: {{.TempC}}</p>{{end}}
+			{{if .TempF}}<p>Temperatura em F°: {{.TempF}}</p>{{end}}
+			{{if .TempK}}<p>Temperatura em K: {{.TempK}}</p>{{end}}
 			{{if .Error}}<p style="color:red;">Erro: {{.Error}}</p>{{end}}
 		</body>
 		</html>
@@ -210,4 +216,8 @@ func weatherRequest(cidade string) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func CtoK(tempC float64) float64 {
+	return tempC + 273
 }
