@@ -10,7 +10,7 @@ Aplicação simples em Go que permite ao usuário digitar um CEP brasileiro, con
 ## 🧪 Exemplo de uso
 
 1. Acesse o link acima.
-2. Digite um CEP válido (ex: `01001-000` ou `85813220`).
+2. Digite um CEP válido (ex: `01001-000`).
 3. Clique em **Buscar**.
 4. O sistema mostrará:
    - CEP pesquisado
