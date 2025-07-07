@@ -7,8 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
+	"unicode"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/text/unicode/norm"
 )
 
 type PageData struct {
@@ -20,20 +23,13 @@ type PageData struct {
 	TempK  string
 }
 
-type viaCep struct {
-	Cep         string `json:"cep"`
-	Logradouro  string `json:"logradouro"`
-	Complemento string `json:"complemento"`
-	Unidade     string `json:"unidade"`
-	Bairro      string `json:"bairro"`
-	Localidade  string `json:"localidade"`
-	Uf          string `json:"uf"`
-	Estado      string `json:"estado"`
-	Regiao      string `json:"regiao"`
-	Ibge        string `json:"ibge"`
-	Gia         string `json:"gia"`
-	Ddd         string `json:"ddd"`
-	Siafi       string `json:"siafi"`
+type brasilApi struct {
+	Cep          string `json:"cep"`
+	State        string `json:"state"`
+	City         string `json:"city"`
+	Neighborhood string `json:"neighborhood"`
+	Street       string `json:"street"`
+	Service      string `json:"service"`
 }
 
 type weather struct {
@@ -105,23 +101,32 @@ func inputHandler(w http.ResponseWriter, r *http.Request) {
 		cep := r.FormValue("cep")
 		data.Result = cep
 
-		body, err := viaCepRequest(cep)
+		body, err := brasilApiRequest(cep)
 		if err != nil {
+			fmt.Println(err)
 			data.Error = fmt.Sprintf("Erro na requisição: %v", err)
 			showTemplate(w, data)
 			return
 		}
 
-		var viaCep_result viaCep
-		err = json.Unmarshal(body, &viaCep_result)
+		var brasilApi_result brasilApi
+		err = json.Unmarshal(body, &brasilApi_result)
 		if err != nil {
+			fmt.Println(err)
 			data.Error = fmt.Sprintf("CEP inválido: %v", err)
 			showTemplate(w, data)
 			return
 		}
 
-		data.Cidade = viaCep_result.Localidade
-		body, err = weatherRequest(data.Cidade)
+		data.Cidade = brasilApi_result.City
+		if data.Cidade == "" {
+			data.Error = "Cidade não encontrada para o CEP informado."
+			showTemplate(w, data)
+			return
+		}
+		cidadeSanitizada := sanitizeCidade(data.Cidade)
+
+		body, err = weatherRequest(cidadeSanitizada)
 		if err != nil {
 			data.Error = fmt.Sprintf("Erro na requisição: %v", err)
 			showTemplate(w, data)
@@ -168,8 +173,8 @@ func showTemplate(w http.ResponseWriter, data PageData) {
 	tmpl.Execute(w, data)
 }
 
-func viaCepRequest(cep string) ([]byte, error) {
-	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
+func brasilApiRequest(cep string) ([]byte, error) {
+	url := fmt.Sprintf("https://brasilapi.com.br/api/cep/v1/%s", cep)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -216,6 +221,32 @@ func weatherRequest(cidade string) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func removeAcentos(str string) string {
+	t := norm.NFD.String(str)
+	var b strings.Builder
+	for _, r := range t {
+		if unicode.Is(unicode.Mn, r) {
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+func sanitizeCidade(input string) string {
+	semAcento := removeAcentos(input)
+
+	var b strings.Builder
+	for _, r := range semAcento {
+		if unicode.IsLetter(r) || unicode.IsSpace(r) {
+			b.WriteRune(r)
+		}
+	}
+
+	limpo := strings.Join(strings.Fields(b.String()), "+")
+	return limpo
 }
 
 func CtoK(tempC float64) float64 {
