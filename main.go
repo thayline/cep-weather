@@ -17,6 +17,7 @@ import (
 type PageData struct {
 	Result string
 	Error  string
+	Error2 string
 	Cidade string
 	TempC  string
 	TempF  string
@@ -103,8 +104,8 @@ func inputHandler(w http.ResponseWriter, r *http.Request) {
 
 		body, err := brasilApiRequest(cep)
 		if err != nil {
-			fmt.Println(err)
 			data.Error = fmt.Sprintf("Erro na requisição: %v", err)
+			data.Error2 = "Atenção! CEPs genéricos de cidades não são aceitos"
 			showTemplate(w, data)
 			return
 		}
@@ -112,8 +113,8 @@ func inputHandler(w http.ResponseWriter, r *http.Request) {
 		var brasilApi_result brasilApi
 		err = json.Unmarshal(body, &brasilApi_result)
 		if err != nil {
-			fmt.Println(err)
 			data.Error = fmt.Sprintf("CEP inválido: %v", err)
+			data.Error2 = "Atenção! CEPs genéricos de cidades não são aceitos"
 			showTemplate(w, data)
 			return
 		}
@@ -121,6 +122,7 @@ func inputHandler(w http.ResponseWriter, r *http.Request) {
 		data.Cidade = brasilApi_result.City
 		if data.Cidade == "" {
 			data.Error = "Cidade não encontrada para o CEP informado."
+			data.Error2 = "Atenção! CEPs genéricos de cidades não são aceitos"
 			showTemplate(w, data)
 			return
 		}
@@ -166,6 +168,7 @@ func showTemplate(w http.ResponseWriter, data PageData) {
 			{{if .TempF}}<p>Temperatura em F°: {{.TempF}}</p>{{end}}
 			{{if .TempK}}<p>Temperatura em K: {{.TempK}}</p>{{end}}
 			{{if .Error}}<p style="color:red;">Erro: {{.Error}}</p>{{end}}
+			{{if .Error2}}<p style="color:red;">{{.Error2}}</p>{{end}}
 		</body>
 		</html>
 	`))
